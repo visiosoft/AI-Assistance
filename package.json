@@ -22,7 +22,8 @@
     "dotenv": "^16.3.1",
     "cors": "^2.8.5",
     "bcryptjs": "^2.4.3",
-    "express-session": "^1.17.3"
+    "express-session": "^1.17.3",
+    "serverless-http": "^3.2.0"
   }
 }
 
