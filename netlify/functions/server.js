@@ -4,11 +4,11 @@ import dotenv from 'dotenv';
 import session from 'express-session';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import serverlessExpress from '@vendia/serverless-express';
 import connectDB from '../../src/config/database.js';
 import Message from '../../src/models/Message.js';
 import AIPrompt from '../../src/models/AIPrompt.js';
 import adminRoutes from '../../src/routes/admin.js';
-import serverless from 'serverless-http';
 
 dotenv.config();
 
@@ -124,6 +124,20 @@ function generateResponse(userMessage, aiPrompt) {
     }
 }
 
-// Export serverless handler
-export const handler = serverless(app);
+// Initialize serverless handler
+let serverlessHandler;
+
+// Export handler for Netlify Functions
+export const handler = async (event, context) => {
+    // Ensure DB connection before handling request
+    await connectDBOnce();
+    
+    // Initialize handler on first invocation
+    if (!serverlessHandler) {
+        serverlessHandler = serverlessExpress({ app });
+    }
+    
+    // Call serverless handler
+    return await serverlessHandler(event, context);
+};
 
