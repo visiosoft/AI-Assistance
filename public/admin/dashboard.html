@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - AI Chatbot</title>
+    <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🤖 AI Admin</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#prompt" class="nav-item active" data-page="prompt">
+                    <span>⚙️</span> AI Prompt
+                </a>
+                <a href="#profiles" class="nav-item" data-page="profiles">
+                    <span>👥</span> Profiles
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <span id="usernameDisplay">Admin</span>
+                </div>
+                <button id="logoutButton" class="logout-button">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- AI Prompt Page -->
+            <div id="promptPage" class="page active">
+                <div class="page-header">
+                    <h1>AI Prompt Configuration</h1>
+                    <p>Manage the AI assistant prompt. You can update it, but only one prompt exists.</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Current AI Prompt</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="promptForm">
+                            <div class="form-group">
+                                <label for="aiPrompt">AI Prompt</label>
+                                <textarea 
+                                    id="aiPrompt" 
+                                    name="aiPrompt" 
+                                    rows="10" 
+                                    placeholder="Enter the AI prompt here..."
+                                    required
+                                ></textarea>
+                                <small>This prompt will be used by the AI assistant. You can only update it, not add more prompts.</small>
+                            </div>
+                            
+                            <div id="promptErrorMessage" class="error-message" style="display: none;"></div>
+                            <div id="promptSuccessMessage" class="success-message" style="display: none;"></div>
+                            
+                            <button type="submit" class="btn btn-primary" id="updatePromptButton">
+                                Update Prompt
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profiles Page -->
+            <div id="profilesPage" class="page">
+                <div class="page-header">
+                    <h1>Profiles Management</h1>
+                    <p>View and manage user profiles</p>
+                    <button class="btn btn-primary" id="addProfileButton">+ Add Profile</button>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div id="profilesList" class="profiles-grid">
+                            <!-- Profiles will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Profile</h2>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <form id="profileForm" class="modal-body">
+                <input type="hidden" id="profileId" />
+                
+                <div class="form-group">
+                    <label for="profileName">Name *</label>
+                    <input type="text" id="profileName" required />
+                </div>
+                
+                <div class="form-group">
+                    <label for="profileEmail">Email *</label>
+                    <input type="email" id="profileEmail" required />
+                </div>
+                
+                <div class="form-group">
+                    <label for="profilePhone">Phone</label>
+                    <input type="tel" id="profilePhone" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="profileBio">Bio</label>
+                    <textarea id="profileBio" rows="4"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="profileAvatar">Avatar URL</label>
+                    <input type="url" id="profileAvatar" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="profileStatus">Status</label>
+                    <select id="profileStatus">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                
+                <div id="profileErrorMessage" class="error-message" style="display: none;"></div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelButton">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveProfileButton">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/admin/admin.js"></script>
+</body>
+</html>
+
