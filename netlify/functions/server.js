@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import session from 'express-session';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import serverlessExpress from '@vendia/serverless-express';
+import { IncomingMessage, ServerResponse } from 'http';
 import connectDB from '../../src/config/database.js';
 import Message from '../../src/models/Message.js';
 import AIPrompt from '../../src/models/AIPrompt.js';
@@ -124,20 +124,134 @@ function generateResponse(userMessage, aiPrompt) {
     }
 }
 
-// Initialize serverless handler
-let serverlessHandler;
+// Convert Netlify Function event to Express request/response
+function createRequestResponse(event) {
+    const { httpMethod, path, queryStringParameters, headers, body, isBase64Encoded } = event;
+    
+    // Parse body
+    let parsedBody = {};
+    if (body) {
+        try {
+            parsedBody = typeof body === 'string' ? JSON.parse(body) : body;
+        } catch (e) {
+            parsedBody = body;
+        }
+    }
+    
+    // Create mock request object
+    const req = Object.create(IncomingMessage.prototype);
+    req.method = httpMethod;
+    req.url = path;
+    req.path = path;
+    req.query = queryStringParameters || {};
+    req.headers = headers || {};
+    req.body = parsedBody;
+    req.ip = headers['x-forwarded-for'] || headers['x-real-ip'] || '127.0.0.1';
+    req.connection = { remoteAddress: req.ip };
+    
+    // Create mock response object
+    const res = Object.create(ServerResponse.prototype);
+    let statusCode = 200;
+    let responseHeaders = {};
+    let responseBody = '';
+    
+    res.status = function(code) {
+        statusCode = code;
+        return res;
+    };
+    
+    res.json = function(data) {
+        responseBody = JSON.stringify(data);
+        responseHeaders['Content-Type'] = 'application/json';
+        return res;
+    };
+    
+    res.send = function(data) {
+        if (typeof data === 'object') {
+            responseBody = JSON.stringify(data);
+            responseHeaders['Content-Type'] = 'application/json';
+        } else {
+            responseBody = data;
+            responseHeaders['Content-Type'] = 'text/html';
+        }
+        return res;
+    };
+    
+    res.setHeader = function(key, value) {
+        responseHeaders[key] = value;
+        return res;
+    };
+    
+    res.getHeader = function(key) {
+        return responseHeaders[key];
+    };
+    
+    res.cookie = function(name, value, options = {}) {
+        let cookie = `${name}=${value}`;
+        if (options.maxAge) cookie += `; Max-Age=${options.maxAge}`;
+        if (options.httpOnly) cookie += '; HttpOnly';
+        if (options.secure) cookie += '; Secure';
+        if (options.sameSite) cookie += `; SameSite=${options.sameSite}`;
+        if (options.path) cookie += `; Path=${options.path}`;
+        
+        const existing = responseHeaders['Set-Cookie'] || [];
+        responseHeaders['Set-Cookie'] = Array.isArray(existing) 
+            ? [...existing, cookie] 
+            : [existing, cookie];
+        return res;
+    };
+    
+    res.end = function(data) {
+        if (data) responseBody = data;
+        return res;
+    };
+    
+    // Store response data
+    res._statusCode = () => statusCode;
+    res._headers = () => responseHeaders;
+    res._body = () => responseBody;
+    
+    return { req, res, getResponse: () => ({ statusCode, headers: responseHeaders, body: responseBody }) };
+}
 
 // Export handler for Netlify Functions
 export const handler = async (event, context) => {
     // Ensure DB connection before handling request
     await connectDBOnce();
     
-    // Initialize handler on first invocation
-    if (!serverlessHandler) {
-        serverlessHandler = serverlessExpress({ app });
+    // Handle CORS preflight
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': event.headers?.origin || '*',
+                'Access-Control-Allow-Credentials': 'true',
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            },
+            body: '',
+        };
     }
     
-    // Call serverless handler
-    return await serverlessHandler(event, context);
+    // Create request/response objects
+    const { req, res, getResponse } = createRequestResponse(event);
+    
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', event.headers?.origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    // Process through Express app
+    return new Promise((resolve) => {
+        app(req, res, () => {
+            const response = getResponse();
+            resolve({
+                statusCode: response.statusCode,
+                headers: response.headers,
+                body: response.body,
+            });
+        });
+    });
 };
 
