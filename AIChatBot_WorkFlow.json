@@ -1,0 +1,1110 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "com.twilio.messaging.inbound-message.received"
+        ]
+      },
+      "id": "699af00c-eb33-4fbb-8fe2-da02c979a64f",
+      "name": "Twilio Trigger",
+      "type": "n8n-nodes-base.twilioTrigger",
+      "typeVersion": 1,
+      "position": [
+        -784,
+        624
+      ],
+      "webhookId": "443a50d4-0cec-43ee-8c7d-a460747205de",
+      "credentials": {
+        "twilioApi": {
+          "id": "JV2jHLCzLlMN8ib1",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract Twilio data\nconst d = $input.all()[0].json.data;\nconst from = d.from.replace('whatsapp:', '');\nconst to = d.to.replace('whatsapp:', '');\nreturn [{ json: { incomingPhone: from, messageBody: d.body, twilioFrom: to } }];"
+      },
+      "id": "6900ccba-6e4c-4645-91ed-3fd421a78454",
+      "name": "Prepare Query",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "UserProfiles",
+        "updateKey": "incomingPhone",
+        "fields": "lastMessage,  lastMessageAt",
+        "upsert": true,
+        "options": {}
+      },
+      "id": "d7cf18c0-c859-46c8-b9ea-5fece766d917",
+      "name": "Upsert User Profile",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        96
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "collection": "aiprompts",
+        "options": {}
+      },
+      "id": "bc6270c2-908a-40b7-af36-2d876b94e80f",
+      "name": "Fetch AI Prompt from DB",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        112,
+        96
+      ],
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": "={{ $json.aiMaxTokens }}",
+          "temperature": "={{ $json.aiTemperature }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        576,
+        208
+      ],
+      "id": "4c5b5cc6-e5af-48bc-b525-3efff58f8f66",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "0swYYFLx0kh79pxV",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.incomingPhone }}",
+        "contextWindowLength": 15
+      },
+      "id": "6f384613-26e0-4614-bfa6-6aceb246d768",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.messageBody }}",
+        "options": {
+          "systemMessage": "={{ $json.prompt }}"
+        }
+      },
+      "id": "2860658e-207a-4fa9-8333-b47c607d8fe7",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        560,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "output",
+              "stringValue": "={{ $json.output }}"
+            },
+            {
+              "name": "incomingPhone",
+              "stringValue": "={{ $('Prepare Query').item.json.incomingPhone }}"
+            },
+            {
+              "name": "messageBody",
+              "stringValue": "={{ $('Prepare Query').item.json.messageBody }}"
+            },
+            {
+              "name": "twilioFrom",
+              "stringValue": "={{ $('Prepare Query').item.json.twilioFrom }}"
+            },
+            {
+              "name": "isNewUser",
+              "stringValue": "={{ $('Combine AI Output1').item.json.isNewUser }}"
+            },
+            {
+              "name": "userProfile",
+              "stringValue": "={{ {name: $json.name, interests: $json.interests, location: $json.location, age: $json.age, messageCount: $json.messageCount} }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fee8d590-e992-4a9e-a518-41c42b4f3e61",
+      "name": "Combine AI Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        912,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "from": "={{ $json.twilioFrom }}",
+        "to": "={{ $json.incomingPhone }}",
+        "toWhatsapp": true,
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "id": "0979f021-13c7-4c8d-a8c0-cc77ad7186da",
+      "name": "Send WhatsApp Reply",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        96
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "JV2jHLCzLlMN8ib1",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process user profile - extract info and determine if new/existing user\nconst items = $input.all();\nconst currentData = items[0].json;\n\n// Debug: Check what data we're receiving\nconsole.log('🔍 Input data from previous nodes:', JSON.stringify({\n  incomingPhone: currentData.incomingPhone,\n  messageBody: currentData.messageBody,\n  hasResponseData: !!currentData.responseData,\n  responseData: currentData.responseData\n}, null, 2));\n\n// Get existing user data - handle both cases (found and not found)\nlet existingUsers = [];\nlet userExists = false;\nlet existingUser = null;\n\nif (currentData.responseData && Array.isArray(currentData.responseData)) {\n  existingUsers = currentData.responseData;\n  userExists = existingUsers.length > 0;\n  existingUser = userExists ? existingUsers[0] : null;\n} else {\n  // If no responseData, check if we have direct data from Prepare Query\n  existingUsers = currentData.data || currentData.items || [];\n  userExists = existingUsers.length > 0;\n  existingUser = userExists ? existingUsers[0] : null;\n}\n\nconsole.log('👤 User existence check:', {\n  phone: currentData.incomingPhone,\n  userExists: userExists,\n  existingUserCount: existingUsers.length,\n  existingUser: existingUser\n});\n\n// Extract profile information from current message\nconst extractedInfo = extractProfileInfo(currentData.messageBody, currentData.incomingPhone);\n\n// Prepare final data - start with data from Prepare Query\nlet finalData = {\n  incomingPhone: currentData.incomingPhone,\n  messageBody: currentData.messageBody,\n  twilioFrom: currentData.twilioFrom,\n  ...extractedInfo,\n  userExists: userExists,\n  isNewUser: !userExists\n};\n\n// If user exists, merge with existing data from database\nif (userExists && existingUser) {\n  finalData = {\n    ...existingUser,\n    ...finalData,\n    // Always update these fields with current message\n    lastMessage: currentData.messageBody,\n    lastMessageAt: new Date().toISOString(),\n    profileUpdatedAt: new Date().toISOString(),\n    messageCount: (existingUser.messageCount || 0) + 1\n  };\n  \n  console.log('🔄 Updated existing user profile');\n} else {\n  // New user - set initial values\n  finalData.createdAt = new Date().toISOString();\n  finalData.lastMessageAt = new Date().toISOString();\n  finalData.profileUpdatedAt = new Date().toISOString();\n  finalData.messageCount = 1;\n  console.log('🆕 Creating new user profile');\n}\n\nconsole.log('✅ Final data to save:', JSON.stringify({\n  phone: finalData.incomingPhone,\n  name: finalData.name,\n  interests: finalData.interests,\n  messageCount: finalData.messageCount,\n  isNewUser: finalData.isNewUser\n}, null, 2));\n\nreturn [{ json: finalData }];\n\n// Profile extraction function - FIXED VERSION\nfunction extractProfileInfo(messageBody, incomingPhone) {\n  const extractedInfo = {\n    incomingPhone: incomingPhone,\n    lastMessage: messageBody,\n    lastMessageAt: new Date().toISOString(),\n    profileUpdatedAt: new Date().toISOString()\n  };\n\n  // Interest categories\n  const interestCategories = {\n    sports: ['sports', 'football', 'soccer', 'basketball', 'cricket', 'tennis', 'swimming', 'gym', 'workout', 'fitness'],\n    music: ['music', 'singing', 'guitar', 'piano', 'drums', 'concerts', 'spotify', 'songs'],\n    arts: ['art', 'painting', 'drawing', 'photography', 'design', 'creative', 'crafts'],\n    entertainment: ['movies', 'netflix', 'cinema', 'tv shows', 'gaming', 'video games', 'anime'],\n    outdoor: ['travel', 'hiking', 'camping', 'adventure', 'nature', 'beach', 'mountains']\n  };\n\n  // Extract interests\n  const foundInterests = [];\n  for (const [category, keywords] of Object.entries(interestCategories)) {\n    for (const keyword of keywords) {\n      const regex = new RegExp(`\\\\b${keyword}\\\\b`, 'i');\n      if (regex.test(messageBody)) {\n        foundInterests.push(category);\n        break;\n      }\n    }\n  }\n  if (foundInterests.length > 0) {\n    extractedInfo.interests = [...new Set(foundInterests)].join(', ');\n  }\n\n  // Age extraction\n  const ageMatch = messageBody.match(/(\\b\\d{1,2}\\b)\\s*(years?|yrs?|yo|age)/i);\n  if (ageMatch) {\n    const age = parseInt(ageMatch[1]);\n    if (age >= 18 && age <= 80) {\n      extractedInfo.age = age;\n    }\n  }\n\n  // FIXED: Better gender extraction with word boundaries and context\n  const lowerMessage = messageBody.toLowerCase();\n  \n  // Check for gender patterns with better context\n  if (/\\b(male|man|boy|he|him|his)\\b/i.test(messageBody) && \n      !/\\b(female|woman|girl|she|her)\\b/i.test(messageBody)) {\n    extractedInfo.gender = 'male';\n  } else if (/\\b(female|woman|girl|she|her)\\b/i.test(messageBody) && \n             !/\\b(male|man|boy|he|him|his)\\b/i.test(messageBody)) {\n    extractedInfo.gender = 'female';\n  }\n  \n  // Alternative: if user explicitly says \"I am female/male\"\n  const explicitGenderMatch = messageBody.match(/i am\\s+(male|female|man|woman|boy|girl)/i);\n  if (explicitGenderMatch) {\n    const genderWord = explicitGenderMatch[1].toLowerCase();\n    if (genderWord === 'male' || genderWord === 'man' || genderWord === 'boy') {\n      extractedInfo.gender = 'male';\n    } else if (genderWord === 'female' || genderWord === 'woman' || genderWord === 'girl') {\n      extractedInfo.gender = 'female';\n    }\n  }\n\n  // Location extraction\n  const locationMatch = messageBody.match(/(?:in|from|live in)\\s+([a-zA-Z\\s]{2,})/i);\n  if (locationMatch && locationMatch[1]) {\n    extractedInfo.location = locationMatch[1].trim();\n  }\n\n  // FIXED: Better name extraction that excludes gender words\n  const nameMatch = messageBody.match(/(?:my name is|i am|i'm|call me)\\s+([a-zA-Z]{2,})(?:\\s|$|\\.|,)/i);\n  if (nameMatch && nameMatch[1]) {\n    const potentialName = nameMatch[1].trim();\n    // Exclude common gender words from being captured as names\n    const genderWords = ['male', 'female', 'man', 'woman', 'boy', 'girl', 'he', 'she', 'his', 'her'];\n    if (!genderWords.includes(potentialName.toLowerCase())) {\n      extractedInfo.name = potentialName.charAt(0).toUpperCase() + potentialName.slice(1).toLowerCase();\n    }\n  }\n\n  // Alternative name pattern if the first one didn't catch it\n  if (!extractedInfo.name) {\n    const altNameMatch = messageBody.match(/(?:name[']?s\\s+)([a-zA-Z]{2,})/i);\n    if (altNameMatch && altNameMatch[1]) {\n      extractedInfo.name = altNameMatch[1].charAt(0).toUpperCase() + altNameMatch[1].slice(1).toLowerCase();\n    }\n  }\n\n  // Debug extraction results\n  console.log('🔍 Profile extraction results:', {\n    message: messageBody,\n    nameFound: extractedInfo.name,\n    genderFound: extractedInfo.gender,\n    ageFound: extractedInfo.age,\n    locationFound: extractedInfo.location,\n    interestsFound: extractedInfo.interests\n  });\n\n  return extractedInfo;\n}"
+      },
+      "id": "df05e159-a926-4755-957b-3c1d36ef301b",
+      "name": "Process User Profile",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "output",
+              "stringValue": "="
+            },
+            {
+              "name": "incomingPhone",
+              "stringValue": "={{ $('Prepare Query').item.json.incomingPhone }}"
+            },
+            {
+              "name": "messageBody",
+              "stringValue": "={{ $('Prepare Query').item.json.messageBody }}"
+            },
+            {
+              "name": "twilioFrom",
+              "stringValue": "={{ $('Prepare Query').item.json.twilioFrom }}"
+            },
+            {
+              "name": "isNewUser",
+              "stringValue": "={{ $('Process User Profile').item.json.isNewUser }}"
+            },
+            {
+              "name": "userProfile",
+              "stringValue": "={{ {name: $json.name, interests: $json.interests, location: $json.location, age: $json.age, messageCount: $json.messageCount} }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6d9bcd94-af28-4330-b240-c19f13887fce",
+      "name": "Combine AI Output1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [
+        336,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "findOneAndUpdate",
+        "collection": "UserProfiles",
+        "updateKey": "=incomingPhone",
+        "fields": "=age",
+        "options": {}
+      },
+      "id": "161acecc-527b-4b84-82d0-5bd9af6e497e",
+      "name": "Update Age",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        624,
+        576
+      ],
+      "alwaysOutputData": false,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "UserProfiles",
+        "updateKey": "incomingPhone",
+        "fields": "interest",
+        "upsert": true,
+        "options": {}
+      },
+      "id": "0ee10b28-0848-4b83-9ad7-d2822a2cea27",
+      "name": "interests",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        624,
+        768
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "UserProfiles",
+        "updateKey": "incomingPhone",
+        "fields": "name",
+        "upsert": true,
+        "options": {}
+      },
+      "id": "4f22c5a0-2b8d-49a5-9e7d-9f4d74e644f8",
+      "name": "Update name",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        624,
+        960
+      ],
+      "alwaysOutputData": false,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "UserProfiles",
+        "updateKey": "incomingPhone",
+        "fields": "location",
+        "upsert": true,
+        "options": {}
+      },
+      "id": "50eaccdf-f591-468d-94c2-4ab79b0ee54a",
+      "name": "update location",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        624,
+        384
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3e0c9e-92c4-40d6-bdaf-048366d82778",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        960
+      ],
+      "id": "9e14ff4e-671e-4124-a51e-dc90630ca8f9",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3e0c9e-92c4-40d6-bdaf-048366d82778",
+              "leftValue": "={{ $json.locations }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        384
+      ],
+      "id": "c6917b97-dc4b-4e52-b14a-b8a05deb447a",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3e0c9e-92c4-40d6-bdaf-048366d82778",
+              "leftValue": "={{ $json.interest }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        768
+      ],
+      "id": "d4713671-57a8-4703-82a7-294080819a6f",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3e0c9e-92c4-40d6-bdaf-048366d82778",
+              "leftValue": "={{ $json.age }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        576
+      ],
+      "id": "35e0565a-ea34-4f6b-8400-af92bac4a826",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3e0c9e-92c4-40d6-bdaf-048366d82778",
+              "leftValue": "={{ $json.gender }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        1152
+      ],
+      "id": "428731a5-b1fb-482c-b380-2cc9454387b8",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "UserProfiles",
+        "updateKey": "incomingPhone",
+        "fields": "gender",
+        "upsert": true,
+        "options": {}
+      },
+      "id": "a43c9856-695f-4b96-94e8-9f5c537eb44c",
+      "name": "Update Gender",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        624,
+        1152
+      ],
+      "alwaysOutputData": false,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3e0c9e-92c4-40d6-bdaf-048366d82778",
+              "leftValue": "={{ $json.traits }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        1344
+      ],
+      "id": "9761cf1f-0d24-464c-9408-5053796423e7",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "UserProfiles",
+        "updateKey": "incomingPhone",
+        "fields": "traits",
+        "upsert": true,
+        "options": {}
+      },
+      "id": "e4c21b16-c5e8-46c1-bbe3-e41d18c00e86",
+      "name": "Update Partner",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        624,
+        1344
+      ],
+      "alwaysOutputData": false,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "prompt": "=You are a structured data extractor. \nRead the message below and return exactly ONE valid JSON object. \nDo not repeat, rephrase, or generate multiple JSON objects. \n\n\nMESSAGE: \"{{ $json.lastMessage }}\"\n\nExtract all personal, professional, and interest-related information mentioned in the message. Include, but do not limit to:\n- name, nickname, or username\n- age, birthdate, or date of birth\n- phone numbers, email addresses, or other contact info\n- city, country, location, or address\n- profession, job title, company, or work experience\n- years of experience, skills, or expertise\n- hobbies, interests, favorite activities, or fields of interest\n- personal traits, qualities, or characteristics\n- social media handles or online profiles\n\nRules:\n1. Include all keys that are present or implied in the message.\n2. Convert experience, profession, and traits into key-value pairs (e.g., \"profession\":\"Transport business owner\", \"experience\":\"10 years in logistics\").\n3. Return exactly one JSON object in a single line, with no duplicates.\n4. If no personal or interest-related information is present, return {}.\n\nExample output:\n{\"name\":\"Zul\",\"age\":40,\"city\":\"Dubai\",\"country\":\"United Arab Emirates\",\"profession\":\"Transport business owner\",\"experience\":\"10 years in logistics and passenger transport\",\"traits\":\"hardworking, disciplined, goal-oriented\",\"interest\":\"traveling, exploring new technologies, networking\"}",
+        "options": {},
+        "requestOptions": {}
+      },
+      "id": "a5ca6e9b-2190-471f-9048-c9d609dd1809",
+      "name": "AI Data Extractor",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        1152
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "0swYYFLx0kh79pxV",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const items = $input.all();\nconst prepareQuery = $('Prepare Query').first().json;\nconst phoneno = prepareQuery.incomingPhone;\n\nconst output = [];\n\nfor (const item of items) {\n  try {\n    const text = item.json.text;\n    if (!text) {\n      output.push({ error: 'Missing text field', phone: phoneno });\n      continue;\n    }\n\n    // Clean and normalize text\n    let cleanText = text\n      .replace(/```json|```/g, '')\n      .replace(/\\\\n/g, '')\n      .trim();\n\n    // Remove wrapping quotes if present\n    if (cleanText.startsWith('\"') && cleanText.endsWith('\"')) {\n      cleanText = cleanText.slice(1, -1);\n    }\n\n    let parsed = {};\n\n    // Try JSON.parse first\n    try {\n      parsed = JSON.parse(cleanText);\n    } catch (err) {\n      // If not valid JSON, extract key-value pairs via regex\n      const regex = /\"([\\w\\s]+)\"\\s*:\\s*(?:\"([^\"]+)\"|(\\d+))/g;\n      let match;\n      while ((match = regex.exec(cleanText)) !== null) {\n        const key = match[1].trim();\n        const value = match[2] ?? (match[3] ? Number(match[3]) : null);\n        if (value !== null && value !== undefined) {\n          parsed[key] = value;\n        }\n      }\n    }\n\n    // Include phone number in the output\n    parsed.incomingPhone = phoneno;\n\n    // Push the parsed data\n    output.push(Object.keys(parsed).length ? parsed : { info: 'No valid data extracted', phone: phoneno });\n\n  } catch (err) {\n    output.push({ error: err.message, phone: phoneno });\n  }\n}\n\nreturn output.length ? output : [{ info: 'No valid JSON found', phone: phoneno }];\n"
+      },
+      "id": "b62947b1-699b-4819-9058-c8e08571d706",
+      "name": "Clean JSON Output",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        112,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3e0c9e-92c4-40d6-bdaf-048366d82778",
+              "leftValue": "={{ $json.city }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        1536
+      ],
+      "id": "3a4a7766-2f6e-4539-8349-cdfdd4ee6337",
+      "name": "If6"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "UserProfiles",
+        "updateKey": "incomingPhone",
+        "fields": "profession",
+        "upsert": true,
+        "options": {}
+      },
+      "id": "3afd1102-ea67-4f47-a4b4-c03e4c584ae2",
+      "name": "Update Profession",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        624,
+        1728
+      ],
+      "alwaysOutputData": false,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "UserProfiles",
+        "updateKey": "incomingPhone",
+        "fields": "city",
+        "upsert": true,
+        "options": {}
+      },
+      "id": "8d76c53a-3e75-41b8-9980-ba758c6cfe5a",
+      "name": "Update City",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        624,
+        1536
+      ],
+      "alwaysOutputData": false,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "UserProfiles",
+        "updateKey": "incomingPhone",
+        "fields": "traits",
+        "upsert": true,
+        "options": {}
+      },
+      "id": "7eb55862-3aa4-4255-86a5-cc2421f0956c",
+      "name": "Update traits",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1,
+      "position": [
+        624,
+        1920
+      ],
+      "alwaysOutputData": false,
+      "credentials": {
+        "mongoDb": {
+          "id": "vxSyIsnSO6M4F0xY",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3e0c9e-92c4-40d6-bdaf-048366d82778",
+              "leftValue": "={{ $json.traits }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        1920
+      ],
+      "id": "a79eaa67-e799-4c04-9a9b-5d54d585e8dc",
+      "name": "If traits"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "aa3e0c9e-92c4-40d6-bdaf-048366d82778",
+              "leftValue": "={{ $json.profession }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        1728
+      ],
+      "id": "bfdfa5ee-d2dc-4ba0-ad8a-830f72f63846",
+      "name": "If profession"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Twilio Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Query": {
+      "main": [
+        [
+          {
+            "node": "Process User Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert User Profile": {
+      "main": [
+        [
+          {
+            "node": "Fetch AI Prompt from DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch AI Prompt from DB": {
+      "main": [
+        [
+          {
+            "node": "Combine AI Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Combine AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine AI Output": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process User Profile": {
+      "main": [
+        [
+          {
+            "node": "Upsert User Profile",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Data Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine AI Output1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Update name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "update location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "interests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Update Age",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Update Gender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "Update Partner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Data Extractor": {
+      "main": [
+        [
+          {
+            "node": "Clean JSON Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean JSON Output": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If profession",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If traits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If6": {
+      "main": [
+        [
+          {
+            "node": "Update City",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If traits": {
+      "main": [
+        [
+          {
+            "node": "Update traits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If profession": {
+      "main": [
+        [
+          {
+            "node": "Update Profession",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a2acc1e0-2a8d-4027-89a9-a6f2daec690e",
+  "meta": {
+    "instanceId": "3d19deae4791f182741626b3b45fffa5c98bf09a2a8db56e038ef9905dda2ee4"
+  },
+  "id": "6aanZ2P4DSpF87f1",
+  "tags": []
+}
