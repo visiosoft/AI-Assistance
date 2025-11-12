@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Admin from '../models/Admin.js';
 import AIPrompt from '../models/AIPrompt.js';
 import Profile from '../models/Profile.js';
@@ -183,6 +184,23 @@ router.delete('/profiles/:id', requireAuth, async (req, res) => {
         });
     } catch (error) {
         console.error('Delete profile error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get all UserProfiles from UserProfiles collection
+router.get('/user-profiles', requireAuth, async (req, res) => {
+    try {
+        const db = mongoose.connection.db;
+        const UserProfiles = db.collection('UserProfiles');
+        
+        const userProfiles = await UserProfiles.find({})
+            .sort({ createdAt: -1 })
+            .toArray();
+        
+        res.json({ userProfiles });
+    } catch (error) {
+        console.error('Get user profiles error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

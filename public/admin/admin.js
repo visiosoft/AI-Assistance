@@ -82,11 +82,44 @@ function initDashboard() {
     initNavigation();
     initPromptPage();
     initProfilesPage();
+    initUserProfilesPage();
     initLogout();
     
-    // Load prompt if prompt page is active on initial load
-    const promptPage = document.getElementById('promptPage');
-    if (promptPage && promptPage.classList.contains('active')) {
+    // Check URL hash to determine which page to show
+    const hash = window.location.hash.replace('#', '') || 'prompt';
+    showPage(hash);
+}
+
+// Show a specific page
+function showPage(pageName) {
+    const navItems = document.querySelectorAll('.nav-item');
+    const pages = document.querySelectorAll('.page');
+
+    // Update active nav item
+    navItems.forEach(nav => {
+        if (nav.dataset.page === pageName) {
+            nav.classList.add('active');
+        } else {
+            nav.classList.remove('active');
+        }
+    });
+
+    // Show corresponding page
+    pages.forEach(p => p.classList.remove('active'));
+    const targetPage = document.getElementById(`${pageName}Page`);
+    if (targetPage) {
+        targetPage.classList.add('active');
+    }
+
+    // Update URL hash
+    window.location.hash = pageName;
+
+    // Load data if needed
+    if (pageName === 'profiles') {
+        loadProfiles();
+    } else if (pageName === 'user-profiles') {
+        loadUserProfiles();
+    } else if (pageName === 'prompt') {
         loadPrompt();
     }
 }
@@ -94,28 +127,19 @@ function initDashboard() {
 // Navigation
 function initNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
-    const pages = document.querySelectorAll('.page');
 
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const page = item.dataset.page;
-
-            // Update active nav item
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
-
-            // Show corresponding page
-            pages.forEach(p => p.classList.remove('active'));
-            document.getElementById(`${page}Page`).classList.add('active');
-
-            // Load data if needed
-            if (page === 'profiles') {
-                loadProfiles();
-            } else if (page === 'prompt') {
-                loadPrompt();
-            }
+            showPage(page);
         });
+    });
+
+    // Listen for hash changes (back/forward button)
+    window.addEventListener('hashchange', () => {
+        const hash = window.location.hash.replace('#', '') || 'prompt';
+        showPage(hash);
     });
 }
 
@@ -418,6 +442,79 @@ async function deleteProfile(profileId) {
 // Make functions globally available for onclick handlers
 window.editProfile = openProfileModal;
 window.deleteProfile = deleteProfile;
+
+// User Profiles Page
+function initUserProfilesPage() {
+    // Initialize user profiles page
+}
+
+async function loadUserProfiles() {
+    const userProfilesList = document.getElementById('userProfilesList');
+    userProfilesList.innerHTML = '<div style="text-align: center; padding: 40px;">Loading user profiles...</div>';
+
+    try {
+        const response = await fetch(`${API_URL}/api/admin/user-profiles`, {
+            credentials: 'include',
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            displayUserProfiles(data.userProfiles);
+        } else {
+            userProfilesList.innerHTML = '<div class="error-message">Failed to load user profiles</div>';
+        }
+    } catch (error) {
+        userProfilesList.innerHTML = '<div class="error-message">Network error. Please try again.</div>';
+    }
+}
+
+function displayUserProfiles(userProfiles) {
+    const userProfilesList = document.getElementById('userProfilesList');
+console.log(userProfiles);
+    if (userProfiles.length === 0) {
+        userProfilesList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);">No user profiles found.</div>';
+        return;
+    }
+
+    userProfilesList.innerHTML = userProfiles.map(profile => {
+        const formatDate = (dateString) => {
+            if (!dateString) return 'N/A';
+            try {
+                return new Date(dateString).toLocaleString();
+            } catch {
+                return dateString;
+            }
+        };
+
+        return `
+            <div class="user-profile-card">
+                <div class="user-profile-header">
+                    <div class="user-profile-avatar">
+                        ${profile.name ? profile.name.charAt(0).toUpperCase() : '?'}
+                    </div>
+                    <div class="user-profile-info">
+                        <h3>${profile.name || 'N/A'}</h3>
+                        <p>${profile.incomingPhone || 'No phone'}</p>
+                    </div>
+                </div>
+                <div class="user-profile-details">
+                    ${profile.gender ? `<div class="user-profile-detail"><span class="detail-label">Gender:</span><span>${profile.gender}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Gender:</span><span>N/A</span></div>'}
+                    ${profile.age ? `<div class="user-profile-detail"><span class="detail-label">Age:</span><span>${profile.age}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Age:</span><span>N/A</span></div>'}
+                    ${profile.city ? `<div class="user-profile-detail"><span class="detail-label">Location:</span><span>${profile.city}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Location:</span><span>N/A</span></div>'}
+                    ${profile.profession ? `<div class="user-profile-detail"><span class="detail-label">Profession:</span><span>${profile.profession}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Profession:</span><span>N/A</span></div>'}
+                    ${profile.interest ? `<div class="user-profile-detail"><span class="detail-label">Interest:</span><span>${profile.interest}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Interest:</span><span>N/A</span></div>'}
+                    ${profile.traits ? `<div class="user-profile-detail"><span class="detail-label">Traits:</span><span>${Array.isArray(profile.traits) ? profile.traits.join(', ') : profile.traits}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Traits:</span><span>N/A</span></div>'}
+                    ${profile.lastMessageAt ? `<div class="user-profile-detail"><span class="detail-label">Last Message At:</span><span>${formatDate(profile.lastMessageAt)}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Last Message At:</span><span>N/A</span></div>'}
+                    <div class="user-profile-detail"><span class="detail-label">Created:</span><span>${formatDate(profile.createdAt)}</span></div>
+                    ${profile.profileUpdatedAt ? `<div class="user-profile-detail"><span class="detail-label">Updated:</span><span>${formatDate(profile.profileUpdatedAt)}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Updated:</span><span>N/A</span></div>'}
+                </div>
+                <div class="user-profile-badges">
+                    ${profile.isNewUser ? '<span class="badge badge-new">New User</span>' : '<span class="badge badge-existing">Existing</span>'}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
 // Logout
 function initLogout() {

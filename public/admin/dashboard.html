@@ -14,11 +14,11 @@
                 <h2>🤖 AI Admin</h2>
             </div>
             <nav class="sidebar-nav">
-                <a href="#prompt" class="nav-item active" data-page="prompt">
+                <a href="#prompt" class="nav-item" data-page="prompt">
                     <span>⚙️</span> AI Prompt
                 </a>
-                <a href="#profiles" class="nav-item" data-page="profiles">
-                    <span>👥</span> Profiles
+                <a href="#user-profiles" class="nav-item" data-page="user-profiles">
+                    <span>👤</span> User Profiles
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -32,7 +32,7 @@
         <!-- Main Content -->
         <main class="main-content">
             <!-- AI Prompt Page -->
-            <div id="promptPage" class="page active">
+            <div id="promptPage" class="page">
                 <div class="page-header">
                     <h1>AI Prompt Configuration</h1>
                     <p>Manage the AI assistant prompt. You can update it, but only one prompt exists.</p>
@@ -79,6 +79,22 @@
                     <div class="card-body">
                         <div id="profilesList" class="profiles-grid">
                             <!-- Profiles will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Profiles Page -->
+            <div id="user-profilesPage" class="page">
+                <div class="page-header">
+                    <h1>User Profiles</h1>
+                    <p>View all user profiles from UserProfiles collection</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <div id="userProfilesList" class="user-profiles-grid">
+                            <!-- User Profiles will be loaded here -->
                         </div>
                     </div>
                 </div>
