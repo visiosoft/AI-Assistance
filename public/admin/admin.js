@@ -238,6 +238,8 @@ function initProfilesPage() {
     const modal = document.getElementById('profileModal');
     const closeModal = document.getElementById('closeModal');
     const cancelButton = document.getElementById('cancelButton');
+    const gridBtn = document.getElementById('profilesGridBtn');
+    const tableBtn = document.getElementById('profilesTableBtn');
 
     addProfileButton.addEventListener('click', () => {
         openProfileModal();
@@ -261,6 +263,16 @@ function initProfilesPage() {
         e.preventDefault();
         await saveProfile();
     });
+
+    // View toggle
+    if (gridBtn && tableBtn) {
+        gridBtn.addEventListener('click', () => switchView('profiles', 'grid'));
+        tableBtn.addEventListener('click', () => switchView('profiles', 'table'));
+        
+        // Load saved view preference
+        const savedView = localStorage.getItem('profilesView') || 'table';
+        switchView('profiles', savedView, false);
+    }
 }
 
 async function loadProfiles() {
@@ -285,36 +297,81 @@ async function loadProfiles() {
 
 function displayProfiles(profiles) {
     const profilesList = document.getElementById('profilesList');
+    const currentView = localStorage.getItem('profilesView') || 'table';
 
     if (profiles.length === 0) {
         profilesList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);">No profiles found. Click "Add Profile" to create one.</div>';
         return;
     }
 
-    profilesList.innerHTML = profiles.map(profile => `
-        <div class="profile-card">
-            <div class="profile-header">
-                <div class="profile-avatar">
-                    ${profile.avatar 
-                        ? `<img src="${profile.avatar}" alt="${profile.name}" />` 
-                        : profile.name.charAt(0).toUpperCase()}
+    if (currentView === 'table') {
+        profilesList.className = 'profiles-grid table-view';
+        profilesList.innerHTML = `
+            <table class="profiles-table">
+                <thead>
+                    <tr>
+                        <th>Avatar</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Bio</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${profiles.map(profile => `
+                        <tr>
+                            <td class="table-avatar-cell">
+                                <div class="table-avatar">
+                                    ${profile.avatar 
+                                        ? `<img src="${profile.avatar}" alt="${profile.name}" />` 
+                                        : profile.name.charAt(0).toUpperCase()}
+                                </div>
+                            </td>
+                            <td><strong>${profile.name}</strong></td>
+                            <td>${profile.email}</td>
+                            <td>${profile.phone || 'N/A'}</td>
+                            <td>${profile.bio ? (profile.bio.length > 50 ? profile.bio.substring(0, 50) + '...' : profile.bio) : 'N/A'}</td>
+                            <td><span class="table-status ${profile.status}">${profile.status}</span></td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn btn-primary" onclick="editProfile('${profile._id}')">Edit</button>
+                                    <button class="btn btn-danger" onclick="deleteProfile('${profile._id}')">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } else {
+        profilesList.className = 'profiles-grid';
+        profilesList.innerHTML = profiles.map(profile => `
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        ${profile.avatar 
+                            ? `<img src="${profile.avatar}" alt="${profile.name}" />` 
+                            : profile.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="profile-info">
+                        <h3>${profile.name}</h3>
+                        <p>${profile.email}</p>
+                    </div>
                 </div>
-                <div class="profile-info">
-                    <h3>${profile.name}</h3>
-                    <p>${profile.email}</p>
+                <div class="profile-details">
+                    ${profile.phone ? `<div class="profile-detail"><span>📞</span><span>${profile.phone}</span></div>` : ''}
+                    ${profile.bio ? `<div class="profile-detail"><span>${profile.bio}</span></div>` : ''}
+                </div>
+                <div class="profile-status ${profile.status}">${profile.status}</div>
+                <div class="profile-actions">
+                    <button class="btn btn-primary" onclick="editProfile('${profile._id}')" style="flex: 1;">Edit</button>
+                    <button class="btn btn-danger" onclick="deleteProfile('${profile._id}')" style="flex: 1;">Delete</button>
                 </div>
             </div>
-            <div class="profile-details">
-                ${profile.phone ? `<div class="profile-detail"><span>📞</span><span>${profile.phone}</span></div>` : ''}
-                ${profile.bio ? `<div class="profile-detail"><span>${profile.bio}</span></div>` : ''}
-            </div>
-            <div class="profile-status ${profile.status}">${profile.status}</div>
-            <div class="profile-actions">
-                <button class="btn btn-primary" onclick="editProfile('${profile._id}')" style="flex: 1;">Edit</button>
-                <button class="btn btn-danger" onclick="deleteProfile('${profile._id}')" style="flex: 1;">Delete</button>
-            </div>
-        </div>
-    `).join('');
+        `).join('');
+    }
 }
 
 function openProfileModal(profileId = null) {
@@ -439,13 +496,54 @@ async function deleteProfile(profileId) {
     }
 }
 
+// View toggle function
+function switchView(pageType, view, reloadData = true) {
+    const isProfiles = pageType === 'profiles';
+    const gridBtn = document.getElementById(isProfiles ? 'profilesGridBtn' : 'userProfilesGridBtn');
+    const tableBtn = document.getElementById(isProfiles ? 'profilesTableBtn' : 'userProfilesTableBtn');
+    
+    // Update button states
+    if (gridBtn && tableBtn) {
+        if (view === 'grid') {
+            gridBtn.classList.add('active');
+            tableBtn.classList.remove('active');
+        } else {
+            tableBtn.classList.add('active');
+            gridBtn.classList.remove('active');
+        }
+    }
+    
+    // Save preference
+    localStorage.setItem(isProfiles ? 'profilesView' : 'userProfilesView', view);
+    
+    // Reload data if needed
+    if (reloadData) {
+        if (isProfiles) {
+            loadProfiles();
+        } else {
+            loadUserProfiles();
+        }
+    }
+}
+
 // Make functions globally available for onclick handlers
 window.editProfile = openProfileModal;
 window.deleteProfile = deleteProfile;
 
 // User Profiles Page
 function initUserProfilesPage() {
-    // Initialize user profiles page
+    const gridBtn = document.getElementById('userProfilesGridBtn');
+    const tableBtn = document.getElementById('userProfilesTableBtn');
+
+    // View toggle
+    if (gridBtn && tableBtn) {
+        gridBtn.addEventListener('click', () => switchView('user-profiles', 'grid'));
+        tableBtn.addEventListener('click', () => switchView('user-profiles', 'table'));
+        
+        // Load saved view preference
+        const savedView = localStorage.getItem('userProfilesView') || 'table';
+        switchView('user-profiles', savedView, false);
+    }
 }
 
 async function loadUserProfiles() {
@@ -470,50 +568,102 @@ async function loadUserProfiles() {
 
 function displayUserProfiles(userProfiles) {
     const userProfilesList = document.getElementById('userProfilesList');
-console.log(userProfiles);
+    const currentView = localStorage.getItem('userProfilesView') || 'table';
+
     if (userProfiles.length === 0) {
         userProfilesList.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-light);">No user profiles found.</div>';
         return;
     }
 
-    userProfilesList.innerHTML = userProfiles.map(profile => {
-        const formatDate = (dateString) => {
-            if (!dateString) return 'N/A';
-            try {
-                return new Date(dateString).toLocaleString();
-            } catch {
-                return dateString;
-            }
-        };
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        try {
+            return new Date(dateString).toLocaleString();
+        } catch {
+            return dateString;
+        }
+    };
 
-        return `
-            <div class="user-profile-card">
-                <div class="user-profile-header">
-                    <div class="user-profile-avatar">
-                        ${profile.name ? profile.name.charAt(0).toUpperCase() : '?'}
-                    </div>
-                    <div class="user-profile-info">
-                        <h3>${profile.name || 'N/A'}</h3>
-                        <p>${profile.incomingPhone || 'No phone'}</p>
-                    </div>
-                </div>
-                <div class="user-profile-details">
-                    ${profile.gender ? `<div class="user-profile-detail"><span class="detail-label">Gender:</span><span>${profile.gender}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Gender:</span><span>N/A</span></div>'}
-                    ${profile.age ? `<div class="user-profile-detail"><span class="detail-label">Age:</span><span>${profile.age}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Age:</span><span>N/A</span></div>'}
-                    ${profile.city ? `<div class="user-profile-detail"><span class="detail-label">Location:</span><span>${profile.city}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Location:</span><span>N/A</span></div>'}
-                    ${profile.profession ? `<div class="user-profile-detail"><span class="detail-label">Profession:</span><span>${profile.profession}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Profession:</span><span>N/A</span></div>'}
-                    ${profile.interest ? `<div class="user-profile-detail"><span class="detail-label">Interest:</span><span>${profile.interest}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Interest:</span><span>N/A</span></div>'}
-                    ${profile.traits ? `<div class="user-profile-detail"><span class="detail-label">Traits:</span><span>${Array.isArray(profile.traits) ? profile.traits.join(', ') : profile.traits}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Traits:</span><span>N/A</span></div>'}
-                    ${profile.lastMessageAt ? `<div class="user-profile-detail"><span class="detail-label">Last Message At:</span><span>${formatDate(profile.lastMessageAt)}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Last Message At:</span><span>N/A</span></div>'}
-                    <div class="user-profile-detail"><span class="detail-label">Created:</span><span>${formatDate(profile.createdAt)}</span></div>
-                    ${profile.profileUpdatedAt ? `<div class="user-profile-detail"><span class="detail-label">Updated:</span><span>${formatDate(profile.profileUpdatedAt)}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Updated:</span><span>N/A</span></div>'}
-                </div>
-                <div class="user-profile-badges">
-                    ${profile.isNewUser ? '<span class="badge badge-new">New User</span>' : '<span class="badge badge-existing">Existing</span>'}
-                </div>
-            </div>
+    if (currentView === 'table') {
+        userProfilesList.className = 'user-profiles-grid table-view';
+        userProfilesList.innerHTML = `
+            <table class="user-profiles-table">
+                <thead>
+                    <tr>
+                        <th>Avatar</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Gender</th>
+                        <th>Age</th>
+                        <th>Location</th>
+                        <th>Profession</th>
+                        <th>Interest</th>
+                        <th>Traits</th>
+                        <th>Status</th>
+                        <th>Last Message</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${userProfiles.map(profile => `
+                        <tr>
+                            <td class="table-avatar-cell">
+                                <div class="table-avatar">
+                                    ${profile.name ? profile.name.charAt(0).toUpperCase() : '?'}
+                                </div>
+                            </td>
+                            <td><strong>${profile.name || 'N/A'}</strong></td>
+                            <td>${profile.incomingPhone || 'N/A'}</td>
+                            <td>${profile.gender || 'N/A'}</td>
+                            <td>${profile.age || 'N/A'}</td>
+                            <td>${profile.city || 'N/A'}</td>
+                            <td>${profile.profession || 'N/A'}</td>
+                            <td>${profile.interest || 'N/A'}</td>
+                            <td>${profile.traits ? (Array.isArray(profile.traits) ? profile.traits.join(', ') : profile.traits) : 'N/A'}</td>
+                            <td>
+                                <span class="table-badge ${profile.isNewUser ? 'badge-new' : 'badge-existing'}">
+                                    ${profile.isNewUser ? 'New User' : 'Existing'}
+                                </span>
+                            </td>
+                            <td>${formatDate(profile.lastMessageAt)}</td>
+                            <td>${formatDate(profile.createdAt)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
         `;
-    }).join('');
+    } else {
+        userProfilesList.className = 'user-profiles-grid';
+        userProfilesList.innerHTML = userProfiles.map(profile => {
+            return `
+                <div class="user-profile-card">
+                    <div class="user-profile-header">
+                        <div class="user-profile-avatar">
+                            ${profile.name ? profile.name.charAt(0).toUpperCase() : '?'}
+                        </div>
+                        <div class="user-profile-info">
+                            <h3>${profile.name || 'N/A'}</h3>
+                            <p>${profile.incomingPhone || 'No phone'}</p>
+                        </div>
+                    </div>
+                    <div class="user-profile-details">
+                        ${profile.gender ? `<div class="user-profile-detail"><span class="detail-label">Gender:</span><span>${profile.gender}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Gender:</span><span>N/A</span></div>'}
+                        ${profile.age ? `<div class="user-profile-detail"><span class="detail-label">Age:</span><span>${profile.age}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Age:</span><span>N/A</span></div>'}
+                        ${profile.city ? `<div class="user-profile-detail"><span class="detail-label">Location:</span><span>${profile.city}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Location:</span><span>N/A</span></div>'}
+                        ${profile.profession ? `<div class="user-profile-detail"><span class="detail-label">Profession:</span><span>${profile.profession}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Profession:</span><span>N/A</span></div>'}
+                        ${profile.interest ? `<div class="user-profile-detail"><span class="detail-label">Interest:</span><span>${profile.interest}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Interest:</span><span>N/A</span></div>'}
+                        ${profile.traits ? `<div class="user-profile-detail"><span class="detail-label">Traits:</span><span>${Array.isArray(profile.traits) ? profile.traits.join(', ') : profile.traits}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Traits:</span><span>N/A</span></div>'}
+                        ${profile.lastMessageAt ? `<div class="user-profile-detail"><span class="detail-label">Last Message At:</span><span>${formatDate(profile.lastMessageAt)}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Last Message At:</span><span>N/A</span></div>'}
+                        <div class="user-profile-detail"><span class="detail-label">Created:</span><span>${formatDate(profile.createdAt)}</span></div>
+                        ${profile.profileUpdatedAt ? `<div class="user-profile-detail"><span class="detail-label">Updated:</span><span>${formatDate(profile.profileUpdatedAt)}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Updated:</span><span>N/A</span></div>'}
+                    </div>
+                    <div class="user-profile-badges">
+                        ${profile.isNewUser ? '<span class="badge badge-new">New User</span>' : '<span class="badge badge-existing">Existing</span>'}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
 }
 
 // Logout

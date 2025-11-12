@@ -70,9 +70,21 @@
             <!-- Profiles Page -->
             <div id="profilesPage" class="page">
                 <div class="page-header">
-                    <h1>Profiles Management</h1>
-                    <p>View and manage user profiles</p>
-                    <button class="btn btn-primary" id="addProfileButton">+ Add Profile</button>
+                    <div>
+                        <h1>Profiles Management</h1>
+                        <p>View and manage user profiles</p>
+                    </div>
+                    <div class="page-header-actions">
+                        <div class="view-toggle">
+                            <button class="view-toggle-btn" data-view="grid" id="profilesGridBtn" title="Grid View">
+                                <span>⊞</span>
+                            </button>
+                            <button class="view-toggle-btn active" data-view="table" id="profilesTableBtn" title="Table View">
+                                <span>☰</span>
+                            </button>
+                        </div>
+                        <button class="btn btn-primary" id="addProfileButton">+ Add Profile</button>
+                    </div>
                 </div>
                 
                 <div class="card">
@@ -87,8 +99,20 @@
             <!-- User Profiles Page -->
             <div id="user-profilesPage" class="page">
                 <div class="page-header">
-                    <h1>User Profiles</h1>
-                    <p>View all user profiles from UserProfiles collection</p>
+                    <div>
+                        <h1>User Profiles</h1>
+                        <p>View all user profiles from UserProfiles collection</p>
+                    </div>
+                    <div class="page-header-actions">
+                        <div class="view-toggle">
+                            <button class="view-toggle-btn" data-view="grid" id="userProfilesGridBtn" title="Grid View">
+                                <span>⊞</span>
+                            </button>
+                            <button class="view-toggle-btn active" data-view="table" id="userProfilesTableBtn" title="Table View">
+                                <span>☰</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="card">
