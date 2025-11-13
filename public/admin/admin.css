@@ -474,8 +474,8 @@ body {
 /* User Profiles Grid */
 .user-profiles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
 }
 
 .user-profiles-grid.table-view {
@@ -564,8 +564,8 @@ body {
 .user-profile-card {
     background: white;
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: 8px;
+    padding: 16px;
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -578,50 +578,50 @@ body {
 .user-profile-header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid var(--border);
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
 }
 
 .user-profile-avatar {
-    width: 60px;
-    height: 60px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 600;
     flex-shrink: 0;
 }
 
 .user-profile-info h3 {
-    font-size: 20px;
+    font-size: 16px;
     color: var(--dark);
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     font-weight: 600;
 }
 
 .user-profile-info p {
-    font-size: 14px;
+    font-size: 12px;
     color: var(--text-light);
 }
 
 .user-profile-details {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .user-profile-detail {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 12px;
-    font-size: 14px;
-    padding: 8px 0;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    padding: 6px 0;
     border-bottom: 1px solid #f3f4f6;
 }
 
@@ -632,8 +632,9 @@ body {
 .user-profile-detail .detail-label {
     font-weight: 600;
     color: var(--text);
-    min-width: 120px;
+    min-width: 100px;
     flex-shrink: 0;
+    font-size: 11px;
 }
 
 .user-profile-detail span:last-child {
@@ -641,14 +642,15 @@ body {
     text-align: right;
     word-break: break-word;
     flex: 1;
+    font-size: 11px;
 }
 
 .user-profile-badges {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
-    margin-top: 16px;
-    padding-top: 16px;
+    margin-top: 12px;
+    padding-top: 12px;
     border-top: 1px solid var(--border);
 }
 

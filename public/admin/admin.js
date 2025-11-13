@@ -575,95 +575,184 @@ function displayUserProfiles(userProfiles) {
         return;
     }
 
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        try {
-            return new Date(dateString).toLocaleString();
-        } catch {
-            return dateString;
+    // Helper function to format values
+    const formatValue = (value, key = '') => {
+        if (value === null || value === undefined) return 'N/A';
+        
+        // Handle MongoDB extended JSON format
+        if (typeof value === 'object' && value !== null) {
+            // Handle $oid
+            if (value.$oid) return value.$oid;
+            // Handle $numberInt
+            if (value.$numberInt !== undefined) return value.$numberInt;
+            // Handle $numberDouble
+            if (value.$numberDouble !== undefined) return value.$numberDouble;
+            // Handle $numberLong
+            if (value.$numberLong !== undefined) return value.$numberLong;
+            // Handle arrays
+            if (Array.isArray(value)) return value.join(', ');
+            // Handle objects - stringify
+            return JSON.stringify(value);
         }
+        
+        // Handle dates - check if it's a date string or date-like key
+        if (typeof value === 'string' && (key.toLowerCase().includes('date') || key.toLowerCase().includes('at') || key.toLowerCase().includes('time'))) {
+            try {
+                const date = new Date(value);
+                if (!isNaN(date.getTime())) {
+                    return date.toLocaleString();
+                }
+            } catch (e) {
+                // Not a valid date, return as is
+            }
+        }
+        
+        return String(value);
+    };
+
+    // Helper function to format key names for display
+    const formatKeyName = (key) => {
+        // Convert camelCase to Title Case
+        return key
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, str => str.toUpperCase())
+            .trim();
+    };
+
+    // Collect all unique keys from all profiles (excluding _id and lastMessageAt)
+    const excludedKeys = ['_id', 'lastMessageAt'];
+    const allKeys = new Set();
+    userProfiles.forEach(profile => {
+        Object.keys(profile).forEach(key => {
+            // Skip excluded fields
+            if (!excludedKeys.includes(key)) {
+                allKeys.add(key);
+            }
+        });
+    });
+
+    // Convert to array and sort (put common fields first, then alphabetically)
+    const commonFields = ['name', 'incomingPhone', 'phone'];
+    const sortedKeys = Array.from(allKeys).sort((a, b) => {
+        const aIndex = commonFields.indexOf(a);
+        const bIndex = commonFields.indexOf(b);
+        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
+    // Get display name for avatar (prefer name, then phone, then first available string field)
+    const getDisplayName = (profile) => {
+        if (profile.name) return profile.name;
+        if (profile.incomingPhone) return profile.incomingPhone;
+        if (profile.phone) return profile.phone;
+        // Find first string value
+        for (const key of sortedKeys) {
+            const val = profile[key];
+            if (typeof val === 'string' && val && key !== '_id') {
+                return val;
+            }
+        }
+        return '?';
     };
 
     if (currentView === 'table') {
         userProfilesList.className = 'user-profiles-grid table-view';
+        
+        // Generate table headers - Avatar column first, then all dynamic fields
+        const tableHeaders = '<th>Avatar</th>' + sortedKeys.map(key => 
+            `<th>${formatKeyName(key)}</th>`
+        ).join('');
+
+        // Generate table rows
+        const tableRows = userProfiles.map(profile => {
+            const displayName = getDisplayName(profile);
+            const avatarInitial = displayName.charAt(0).toUpperCase();
+            
+            // Avatar cell
+            const avatarCell = `
+                <td class="table-avatar-cell">
+                    <div class="table-avatar">${avatarInitial}</div>
+                </td>
+            `;
+            
+            // Dynamic field cells
+            const fieldCells = sortedKeys.map(key => {
+                const value = profile[key];
+                const formattedValue = formatValue(value, key);
+                
+                // Truncate long values
+                const displayValue = formattedValue.length > 50 
+                    ? formattedValue.substring(0, 50) + '...' 
+                    : formattedValue;
+                
+                return `<td title="${escapeHtml(formattedValue)}">${escapeHtml(displayValue)}</td>`;
+            }).join('');
+            
+            return `<tr>${avatarCell}${fieldCells}</tr>`;
+        }).join('');
+
         userProfilesList.innerHTML = `
             <table class="user-profiles-table">
                 <thead>
                     <tr>
-                        <th>Avatar</th>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Gender</th>
-                        <th>Age</th>
-                        <th>Location</th>
-                        <th>Profession</th>
-                        <th>Interest</th>
-                        <th>Traits</th>
-                        <th>Status</th>
-                        <th>Last Message</th>
-                        <th>Created</th>
+                        ${tableHeaders}
                     </tr>
                 </thead>
                 <tbody>
-                    ${userProfiles.map(profile => `
-                        <tr>
-                            <td class="table-avatar-cell">
-                                <div class="table-avatar">
-                                    ${profile.name ? profile.name.charAt(0).toUpperCase() : '?'}
-                                </div>
-                            </td>
-                            <td><strong>${profile.name || 'N/A'}</strong></td>
-                            <td>${profile.incomingPhone || 'N/A'}</td>
-                            <td>${profile.gender || 'N/A'}</td>
-                            <td>${profile.age || 'N/A'}</td>
-                            <td>${profile.city || 'N/A'}</td>
-                            <td>${profile.profession || 'N/A'}</td>
-                            <td>${profile.interest || 'N/A'}</td>
-                            <td>${profile.traits ? (Array.isArray(profile.traits) ? profile.traits.join(', ') : profile.traits) : 'N/A'}</td>
-                            <td>
-                                <span class="table-badge ${profile.isNewUser ? 'badge-new' : 'badge-existing'}">
-                                    ${profile.isNewUser ? 'New User' : 'Existing'}
-                                </span>
-                            </td>
-                            <td>${formatDate(profile.lastMessageAt)}</td>
-                            <td>${formatDate(profile.createdAt)}</td>
-                        </tr>
-                    `).join('')}
+                    ${tableRows}
                 </tbody>
             </table>
         `;
     } else {
         userProfilesList.className = 'user-profiles-grid';
         userProfilesList.innerHTML = userProfiles.map(profile => {
+            const displayName = getDisplayName(profile);
+            const avatarInitial = displayName.charAt(0).toUpperCase();
+            
+            // Get primary identifier for header
+            const primaryId = profile.name || profile.incomingPhone || profile.phone || 'N/A';
+            const secondaryId = profile.incomingPhone || profile.phone || '';
+            
+            // Generate dynamic details
+            const details = sortedKeys
+                .map(key => {
+                    const value = profile[key];
+                    const formattedValue = formatValue(value, key);
+                    return `
+                        <div class="user-profile-detail">
+                            <span class="detail-label">${formatKeyName(key)}:</span>
+                            <span>${escapeHtml(formattedValue)}</span>
+                        </div>
+                    `;
+                }).join('');
+
             return `
                 <div class="user-profile-card">
                     <div class="user-profile-header">
                         <div class="user-profile-avatar">
-                            ${profile.name ? profile.name.charAt(0).toUpperCase() : '?'}
+                            ${avatarInitial}
                         </div>
                         <div class="user-profile-info">
-                            <h3>${profile.name || 'N/A'}</h3>
-                            <p>${profile.incomingPhone || 'No phone'}</p>
+                            <h3>${escapeHtml(primaryId)}</h3>
+                            ${secondaryId && secondaryId !== primaryId ? `<p>${escapeHtml(secondaryId)}</p>` : ''}
                         </div>
                     </div>
                     <div class="user-profile-details">
-                        ${profile.gender ? `<div class="user-profile-detail"><span class="detail-label">Gender:</span><span>${profile.gender}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Gender:</span><span>N/A</span></div>'}
-                        ${profile.age ? `<div class="user-profile-detail"><span class="detail-label">Age:</span><span>${profile.age}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Age:</span><span>N/A</span></div>'}
-                        ${profile.city ? `<div class="user-profile-detail"><span class="detail-label">Location:</span><span>${profile.city}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Location:</span><span>N/A</span></div>'}
-                        ${profile.profession ? `<div class="user-profile-detail"><span class="detail-label">Profession:</span><span>${profile.profession}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Profession:</span><span>N/A</span></div>'}
-                        ${profile.interest ? `<div class="user-profile-detail"><span class="detail-label">Interest:</span><span>${profile.interest}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Interest:</span><span>N/A</span></div>'}
-                        ${profile.traits ? `<div class="user-profile-detail"><span class="detail-label">Traits:</span><span>${Array.isArray(profile.traits) ? profile.traits.join(', ') : profile.traits}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Traits:</span><span>N/A</span></div>'}
-                        ${profile.lastMessageAt ? `<div class="user-profile-detail"><span class="detail-label">Last Message At:</span><span>${formatDate(profile.lastMessageAt)}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Last Message At:</span><span>N/A</span></div>'}
-                        <div class="user-profile-detail"><span class="detail-label">Created:</span><span>${formatDate(profile.createdAt)}</span></div>
-                        ${profile.profileUpdatedAt ? `<div class="user-profile-detail"><span class="detail-label">Updated:</span><span>${formatDate(profile.profileUpdatedAt)}</span></div>` : '<div class="user-profile-detail"><span class="detail-label">Updated:</span><span>N/A</span></div>'}
-                    </div>
-                    <div class="user-profile-badges">
-                        ${profile.isNewUser ? '<span class="badge badge-new">New User</span>' : '<span class="badge badge-existing">Existing</span>'}
+                        ${details}
                     </div>
                 </div>
             `;
         }).join('');
     }
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Logout
