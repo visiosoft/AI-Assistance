@@ -112,6 +112,17 @@
                                 <span>☰</span>
                             </button>
                         </div>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <input 
+                                type="text" 
+                                id="searchUserProfilePhone" 
+                                placeholder="Search by phone number..." 
+                                style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; min-width: 200px;"
+                            />
+                            <button class="btn btn-secondary" id="searchUserProfileButton" style="padding: 8px 16px;">Search</button>
+                            <button class="btn btn-secondary" id="clearUserProfileSearchButton" style="padding: 8px 16px;">Clear</button>
+                        </div>
+                        <button class="btn btn-primary" id="addUserProfileButton">+ Add User Profile</button>
                     </div>
                 </div>
                 
@@ -178,7 +189,32 @@
             </form>
         </div>
     </div>
-    
+
+    <!-- Add/Edit User Profile Modal -->
+    <div id="userProfileModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 id="userProfileModalTitle">Add User Profile</h2>
+                <button class="modal-close" id="closeUserProfileModal">&times;</button>
+            </div>
+            <form id="userProfileForm" class="modal-body">
+                <input type="hidden" id="userProfileId" />
+                
+                <div id="userProfileFormFields">
+                    <!-- Dynamic fields will be generated here -->
+                </div>
+                
+                <div id="userProfileErrorMessage" class="error-message" style="display: none;"></div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelUserProfileButton">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveUserProfileButton">Save User Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="toastContainer" class="toast-container"></div>
+
     <script src="/admin/admin.js"></script>
 </body>
 </html>
