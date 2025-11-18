@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - AI Chatbot</title>
     <link rel="stylesheet" href="/admin/admin.css">
+    <!-- CodeMirror for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/json/json.min.js"></script>
 </head>
 <body>
     <div class="dashboard-container">
@@ -16,6 +22,9 @@
             <nav class="sidebar-nav">
                 <a href="#prompt" class="nav-item" data-page="prompt">
                     <span>⚙️</span> AI Prompt
+                </a>
+                <a href="#extract-ai-prompt" class="nav-item" data-page="extract-ai-prompt">
+                    <span>🔍</span> AI Extracting Prompt
                 </a>
                 <a href="#user-profiles" class="nav-item" data-page="user-profiles">
                     <span>👤</span> User Profiles
@@ -61,6 +70,42 @@
                             
                             <button type="submit" class="btn btn-primary" id="updatePromptButton">
                                 Update Prompt
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Extracting Prompt Page -->
+            <div id="extract-ai-promptPage" class="page">
+                <div class="page-header">
+                    <h1>AI Extracting Prompt Configuration</h1>
+                    <p>Manage the AI extracting prompt. You can update it, but only one extracting prompt exists.</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Current AI Extracting Prompt</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="extractAIPromptForm">
+                            <div class="form-group">
+                                <label for="extractAIPrompt">AI Extracting Prompt</label>
+                                <textarea 
+                                    id="extractAIPrompt" 
+                                    name="extractAIPrompt" 
+                                    rows="10" 
+                                    placeholder="Enter the AI extracting prompt here..."
+                                    required
+                                ></textarea>
+                                <small>This prompt will be used by the AI for extracting data. You can only update it, not add more prompts.</small>
+                            </div>
+                            
+                            <div id="extractAIPromptErrorMessage" class="error-message" style="display: none;"></div>
+                            <div id="extractAIPromptSuccessMessage" class="success-message" style="display: none;"></div>
+                            
+                            <button type="submit" class="btn btn-primary" id="updateExtractAIPromptButton">
+                                Update Extracting Prompt
                             </button>
                         </form>
                     </div>

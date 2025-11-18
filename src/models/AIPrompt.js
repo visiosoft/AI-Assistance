@@ -4,6 +4,10 @@ const aiPromptSchema = new mongoose.Schema({
     prompt: {
         type: String,
         required: true
+    },
+    extractAI: {
+        type: String,
+        default: ''
     }
 }, {
     timestamps: true
@@ -22,6 +26,19 @@ aiPromptSchema.statics.updatePrompt = async function(newPrompt) {
         prompt = await this.create({ prompt: newPrompt });
     } else {
         prompt.prompt = newPrompt;
+        await prompt.save();
+    }
+    return prompt;
+};
+
+// Update or create extractAI prompt
+aiPromptSchema.statics.updateExtractAI = async function(newExtractAI) {
+    let prompt = await this.findOne();
+    if (!prompt) {
+        // Create if it doesn't exist - use default prompt value
+        prompt = await this.create({ prompt: 'Default AI prompt', extractAI: newExtractAI });
+    } else {
+        prompt.extractAI = newExtractAI;
         await prompt.save();
     }
     return prompt;

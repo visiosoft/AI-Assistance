@@ -81,6 +81,7 @@ async function checkAuthAndInit() {
 function initDashboard() {
     initNavigation();
     initPromptPage();
+    initExtractAIPromptPage();
     initProfilesPage();
     initUserProfilesPage();
     initLogout();
@@ -121,6 +122,20 @@ function showPage(pageName) {
         loadUserProfiles();
     } else if (pageName === 'prompt') {
         loadPrompt();
+        // Refresh CodeMirror if it exists
+        if (aiPromptEditor) {
+            setTimeout(() => {
+                aiPromptEditor.refresh();
+            }, 100);
+        }
+    } else if (pageName === 'extract-ai-prompt') {
+        loadExtractAIPrompt();
+        // Refresh CodeMirror if it exists
+        if (extractAIPromptEditor) {
+            setTimeout(() => {
+                extractAIPromptEditor.refresh();
+            }, 100);
+        }
     }
 }
 
@@ -143,11 +158,30 @@ function initNavigation() {
     });
 }
 
+// Store CodeMirror instances
+let aiPromptEditor = null;
+let extractAIPromptEditor = null;
+
 // AI Prompt Page
 function initPromptPage() {
     const promptForm = document.getElementById('promptForm');
     const errorMessage = document.getElementById('promptErrorMessage');
     const successMessage = document.getElementById('promptSuccessMessage');
+    const promptTextarea = document.getElementById('aiPrompt');
+
+    // Initialize CodeMirror for JSON syntax highlighting
+    if (promptTextarea && typeof CodeMirror !== 'undefined') {
+        aiPromptEditor = CodeMirror.fromTextArea(promptTextarea, {
+            mode: { name: 'javascript', json: true },
+            theme: 'monokai',
+            lineNumbers: true,
+            lineWrapping: true,
+            indentUnit: 2,
+            tabSize: 2,
+            matchBrackets: true,
+            autoCloseBrackets: true
+        });
+    }
 
     // Load current prompt
     loadPrompt();
@@ -155,7 +189,7 @@ function initPromptPage() {
     promptForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const prompt = document.getElementById('aiPrompt').value.trim();
+        const prompt = aiPromptEditor ? aiPromptEditor.getValue().trim() : document.getElementById('aiPrompt').value.trim();
         const updateButton = document.getElementById('updatePromptButton');
 
         errorMessage.style.display = 'none';
@@ -202,8 +236,14 @@ async function loadPrompt() {
     if (!promptTextarea) return;
     
     // Show loading state
-    promptTextarea.disabled = true;
-    promptTextarea.value = 'Loading prompt from database...';
+    const loadingText = 'Loading prompt from database...';
+    if (aiPromptEditor) {
+        aiPromptEditor.setValue(loadingText);
+        aiPromptEditor.setOption('readOnly', true);
+    } else {
+        promptTextarea.disabled = true;
+        promptTextarea.value = loadingText;
+    }
     errorMessage.style.display = 'none';
     
     try {
@@ -213,21 +253,168 @@ async function loadPrompt() {
 
         if (response.ok) {
             const data = await response.json();
-            promptTextarea.value = data.prompt || '';
-            promptTextarea.disabled = false;
+            const promptValue = data.prompt || '';
+            if (aiPromptEditor) {
+                aiPromptEditor.setValue(promptValue);
+                aiPromptEditor.setOption('readOnly', false);
+            } else {
+                promptTextarea.value = promptValue;
+                promptTextarea.disabled = false;
+            }
         } else {
             const errorData = await response.json();
             errorMessage.textContent = errorData.error || 'Failed to load prompt from database';
             errorMessage.style.display = 'block';
-            promptTextarea.value = '';
-            promptTextarea.disabled = false;
+            if (aiPromptEditor) {
+                aiPromptEditor.setValue('');
+                aiPromptEditor.setOption('readOnly', false);
+            } else {
+                promptTextarea.value = '';
+                promptTextarea.disabled = false;
+            }
         }
     } catch (error) {
         console.error('Error loading prompt:', error);
         errorMessage.textContent = 'Network error. Failed to load prompt from database.';
         errorMessage.style.display = 'block';
-        promptTextarea.value = '';
-        promptTextarea.disabled = false;
+        if (aiPromptEditor) {
+            aiPromptEditor.setValue('');
+            aiPromptEditor.setOption('readOnly', false);
+        } else {
+            promptTextarea.value = '';
+            promptTextarea.disabled = false;
+        }
+    }
+}
+
+// AI Extracting Prompt Page
+function initExtractAIPromptPage() {
+    const extractAIPromptForm = document.getElementById('extractAIPromptForm');
+    const errorMessage = document.getElementById('extractAIPromptErrorMessage');
+    const successMessage = document.getElementById('extractAIPromptSuccessMessage');
+    const extractAIPromptTextarea = document.getElementById('extractAIPrompt');
+
+    if (!extractAIPromptForm) return;
+
+    // Initialize CodeMirror for JSON syntax highlighting
+    if (extractAIPromptTextarea && typeof CodeMirror !== 'undefined') {
+        extractAIPromptEditor = CodeMirror.fromTextArea(extractAIPromptTextarea, {
+            mode: { name: 'javascript', json: true },
+            theme: 'monokai',
+            lineNumbers: true,
+            lineWrapping: true,
+            indentUnit: 2,
+            tabSize: 2,
+            matchBrackets: true,
+            autoCloseBrackets: true
+        });
+    }
+
+    // Load current extractAI prompt
+    loadExtractAIPrompt();
+
+    extractAIPromptForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const extractAI = extractAIPromptEditor ? extractAIPromptEditor.getValue().trim() : document.getElementById('extractAIPrompt').value.trim();
+        const updateButton = document.getElementById('updateExtractAIPromptButton');
+
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+        updateButton.disabled = true;
+        updateButton.textContent = 'Updating...';
+
+        try {
+            const response = await fetch(`${API_URL}/api/admin/extract-ai-prompt`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ extractAI }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                successMessage.textContent = data.message || 'Extracting Prompt updated successfully!';
+                successMessage.style.display = 'block';
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                }, 3000);
+            } else {
+                errorMessage.textContent = data.error || 'Failed to update extracting prompt';
+                errorMessage.style.display = 'block';
+            }
+        } catch (error) {
+            errorMessage.textContent = 'Network error. Please try again.';
+            errorMessage.style.display = 'block';
+        } finally {
+            updateButton.disabled = false;
+            updateButton.textContent = 'Update Extracting Prompt';
+        }
+    });
+}
+
+async function loadExtractAIPrompt() {
+    const extractAIPromptTextarea = document.getElementById('extractAIPrompt');
+    const errorMessage = document.getElementById('extractAIPromptErrorMessage');
+    
+    if (!extractAIPromptTextarea) return;
+    
+    // Show loading state
+    const loadingText = 'Loading extracting prompt from database...';
+    if (extractAIPromptEditor) {
+        extractAIPromptEditor.setValue(loadingText);
+        extractAIPromptEditor.setOption('readOnly', true);
+    } else {
+        extractAIPromptTextarea.disabled = true;
+        extractAIPromptTextarea.value = loadingText;
+    }
+    if (errorMessage) errorMessage.style.display = 'none';
+    
+    try {
+        const response = await fetch(`${API_URL}/api/admin/extract-ai-prompt`, {
+            credentials: 'include',
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const extractAIValue = data.extractAI || '';
+            if (extractAIPromptEditor) {
+                extractAIPromptEditor.setValue(extractAIValue);
+                extractAIPromptEditor.setOption('readOnly', false);
+            } else {
+                extractAIPromptTextarea.value = extractAIValue;
+                extractAIPromptTextarea.disabled = false;
+            }
+        } else {
+            const errorData = await response.json();
+            if (errorMessage) {
+                errorMessage.textContent = errorData.error || 'Failed to load extracting prompt from database';
+                errorMessage.style.display = 'block';
+            }
+            if (extractAIPromptEditor) {
+                extractAIPromptEditor.setValue('');
+                extractAIPromptEditor.setOption('readOnly', false);
+            } else {
+                extractAIPromptTextarea.value = '';
+                extractAIPromptTextarea.disabled = false;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading extracting prompt:', error);
+        if (errorMessage) {
+            errorMessage.textContent = 'Network error. Failed to load extracting prompt from database.';
+            errorMessage.style.display = 'block';
+        }
+        if (extractAIPromptEditor) {
+            extractAIPromptEditor.setValue('');
+            extractAIPromptEditor.setOption('readOnly', false);
+        } else {
+            extractAIPromptTextarea.value = '';
+            extractAIPromptTextarea.disabled = false;
+        }
     }
 }
 

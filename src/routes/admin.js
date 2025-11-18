@@ -91,6 +91,39 @@ router.put('/ai-prompt', requireAuth, async (req, res) => {
     }
 });
 
+// Get AI Extracting Prompt
+router.get('/extract-ai-prompt', requireAuth, async (req, res) => {
+    try {
+        const promptDoc = await AIPrompt.getPrompt();
+        // Return the extractAI from database, or empty string if not set yet
+        res.json({ extractAI: promptDoc ? (promptDoc.extractAI || '') : '' });
+    } catch (error) {
+        console.error('Get extractAI prompt error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Update AI Extracting Prompt
+router.put('/extract-ai-prompt', requireAuth, async (req, res) => {
+    try {
+        const { extractAI } = req.body;
+
+        if (!extractAI || typeof extractAI !== 'string' || extractAI.trim().length === 0) {
+            return res.status(400).json({ error: 'Extract AI prompt is required' });
+        }
+
+        const updatedPrompt = await AIPrompt.updateExtractAI(extractAI.trim());
+        res.json({ 
+            success: true, 
+            message: 'AI Extracting Prompt updated successfully',
+            extractAI: updatedPrompt.extractAI 
+        });
+    } catch (error) {
+        console.error('Update extractAI prompt error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get all profiles
 router.get('/profiles', requireAuth, async (req, res) => {
     try {
