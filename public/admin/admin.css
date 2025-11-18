@@ -96,6 +96,17 @@ body {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.form-group input[readonly] {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+    color: var(--text-light);
+}
+
+.form-group input[readonly]:focus {
+    border-color: var(--border);
+    box-shadow: none;
+}
+
 .form-group textarea {
     resize: vertical;
     min-height: 120px;

@@ -991,6 +991,9 @@ function generateUserProfileFormFields(profileData = {}) {
             }
         }
         
+        // Make incomingPhone read-only when editing (when profileData has incomingPhone value)
+        const isReadOnly = key === 'incomingPhone' && profileData.incomingPhone !== undefined && profileData.incomingPhone !== null && profileData.incomingPhone !== '';
+        
         return `
             <div class="form-group">
                 <label for="userProfile_${key}">${formattedKey}${isRequired ? ' *' : ''}</label>
@@ -1001,6 +1004,7 @@ function generateUserProfileFormFields(profileData = {}) {
                     value="${escapeHtml(inputValue)}"
                     ${isRequired ? 'required' : ''}
                     ${inputAttributes}
+                    ${isReadOnly ? 'readonly' : ''}
                 />
             </div>
         `;
@@ -1173,6 +1177,12 @@ async function saveUserProfile() {
     const inputs = form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="number"]');
     inputs.forEach(input => {
         const key = input.name || input.id.replace('userProfile_', '');
+        
+        // Skip incomingPhone when editing (it's read-only and shouldn't be changed)
+        if (profileId && key === 'incomingPhone') {
+            return;
+        }
+        
         const value = input.value.trim();
         if (value) {
             // Try to parse numbers
