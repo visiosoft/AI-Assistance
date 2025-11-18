@@ -205,7 +205,7 @@ router.get('/user-profiles', requireAuth, async (req, res) => {
         } : {};
         
         const userProfiles = await UserProfiles.find(query)
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1, _id: -1 })
             .toArray();
         
         // Log ID formats for debugging (only first time or when debugging)
