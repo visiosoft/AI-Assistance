@@ -324,6 +324,17 @@ router.post('/user-profiles', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'incomingPhone is required' });
         }
         
+        // Validate age if provided
+        if (profileData.age !== undefined && profileData.age !== null && profileData.age !== '') {
+            const age = Number(profileData.age);
+            if (isNaN(age) || age < 18) {
+                return res.status(400).json({ error: 'Age must be at least 18 years' });
+            }
+            if (age > 120) {
+                return res.status(400).json({ error: 'Age must be 120 years or less' });
+            }
+        }
+        
         // Add timestamps
         profileData.createdAt = new Date();
         profileData.updatedAt = new Date();
@@ -371,6 +382,17 @@ router.put('/user-profiles/:id', requireAuth, async (req, res) => {
         
         // Remove _id from update data if present
         delete profileData._id;
+        
+        // Validate age if provided
+        if (profileData.age !== undefined && profileData.age !== null && profileData.age !== '') {
+            const age = Number(profileData.age);
+            if (isNaN(age) || age < 18) {
+                return res.status(400).json({ error: 'Age must be at least 18 years' });
+            }
+            if (age > 120) {
+                return res.status(400).json({ error: 'Age must be 120 years or less' });
+            }
+        }
         
         // Update timestamp
         profileData.updatedAt = new Date();

@@ -667,7 +667,7 @@ function displayUserProfiles(userProfiles) {
     }
 
     // Store keys for form generation
-    const excludedKeys = ['_id', 'lastMessageAt', 'lastMessage'];
+    const excludedKeys = ['_id', 'lastMessageAt', 'lastMessage', 'profileUpdatedAt'];
     const allKeys = new Set();
     userProfiles.forEach(profile => {
         Object.keys(profile).forEach(key => {
@@ -969,9 +969,13 @@ function generateUserProfileFormFields(profileData = {}) {
         
         // Determine input type
         let inputType = 'text';
+        let inputAttributes = '';
         if (key.toLowerCase().includes('email')) inputType = 'email';
         if (key.toLowerCase().includes('phone')) inputType = 'tel';
-        if (key.toLowerCase().includes('age')) inputType = 'number';
+        if (key.toLowerCase().includes('age')) {
+            inputType = 'number';
+            inputAttributes = 'min="18" max="120"';
+        }
         
         // Handle special value types
         let inputValue = '';
@@ -996,6 +1000,7 @@ function generateUserProfileFormFields(profileData = {}) {
                     name="${key}"
                     value="${escapeHtml(inputValue)}"
                     ${isRequired ? 'required' : ''}
+                    ${inputAttributes}
                 />
             </div>
         `;
@@ -1187,6 +1192,31 @@ async function saveUserProfile() {
             showToast('Incoming phone is required', 'error');
         }
         return;
+    }
+
+    // Validate age if provided
+    if (profileData.age !== undefined && profileData.age !== null && profileData.age !== '') {
+        const age = Number(profileData.age);
+        if (isNaN(age) || age < 18) {
+            if (errorMessage) {
+                errorMessage.textContent = 'Age must be at least 18 years';
+                errorMessage.style.display = 'block';
+            }
+            showToast('Age must be at least 18 years', 'error');
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save User Profile';
+            return;
+        }
+        if (age > 120) {
+            if (errorMessage) {
+                errorMessage.textContent = 'Age must be 120 years or less';
+                errorMessage.style.display = 'block';
+            }
+            showToast('Age must be 120 years or less', 'error');
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save User Profile';
+            return;
+        }
     }
 
     if (errorMessage) {
