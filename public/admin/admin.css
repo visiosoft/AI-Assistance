@@ -139,6 +139,17 @@ body {
     color: var(--text-light);
     font-size: 12px;
     margin-top: 4px;
+    line-height: 1.6;
+}
+
+.form-group small code {
+    background-color: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: var(--primary);
+    border: 1px solid var(--border);
 }
 
 .login-button,

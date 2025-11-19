@@ -52,7 +52,7 @@
                         <h2>Current AI Prompt</h2>
                     </div>
                     <div class="card-body">
-                        <form id="promptForm">
+                        <form id="promptForm" novalidate>
                             <div class="form-group">
                                 <label for="aiPrompt">AI Prompt</label>
                                 <textarea 
@@ -88,7 +88,7 @@
                         <h2>Current AI Extracting Prompt</h2>
                     </div>
                     <div class="card-body">
-                        <form id="extractAIPromptForm">
+                        <form id="extractAIPromptForm" novalidate>
                             <div class="form-group">
                                 <label for="extractAIPrompt">AI Extracting Prompt</label>
                                 <textarea 
@@ -98,7 +98,13 @@
                                     placeholder="Enter the AI extracting prompt here..."
                                     required
                                 ></textarea>
-                                <small>This prompt will be used by the AI for extracting data. You can only update it, not add more prompts.</small>
+                                <small>
+                                    This prompt will be used by the AI for extracting data. You can only update it, not add more prompts.
+                                    <br><br>
+                                    <strong>Required Fields:</strong> The following two fields must be included in your prompt template:
+                                    <br>• <code>LAST AI QUESTION: {{ $json.lastMessage || "No previous message" }}</code>
+                                    <br>• <code>USER'S REPLY: "{{ $json.messageBody }}"</code>
+                                </small>
                             </div>
                             
                             <div id="extractAIPromptErrorMessage" class="error-message" style="display: none;"></div>

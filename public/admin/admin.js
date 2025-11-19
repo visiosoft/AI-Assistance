@@ -194,6 +194,14 @@ function initPromptPage() {
 
         errorMessage.style.display = 'none';
         successMessage.style.display = 'none';
+        
+        // Manual validation
+        if (!prompt) {
+            errorMessage.textContent = 'AI Prompt is required';
+            errorMessage.style.display = 'block';
+            return;
+        }
+        
         updateButton.disabled = true;
         updateButton.textContent = 'Updating...';
 
@@ -321,6 +329,14 @@ function initExtractAIPromptPage() {
 
         errorMessage.style.display = 'none';
         successMessage.style.display = 'none';
+        
+        // Manual validation
+        if (!extractAI) {
+            errorMessage.textContent = 'AI Extracting Prompt is required';
+            errorMessage.style.display = 'block';
+            return;
+        }
+        
         updateButton.disabled = true;
         updateButton.textContent = 'Updating...';
 
