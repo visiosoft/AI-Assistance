@@ -238,7 +238,7 @@ router.get('/user-profiles', requireAuth, async (req, res) => {
         } : {};
         
         const userProfiles = await UserProfiles.find(query)
-            .sort({ createdAt: -1, _id: -1 })
+            .sort({ profileUpdatedAt: -1, _id: -1 })
             .toArray();
         
         // Log ID formats for debugging (only first time or when debugging)
@@ -429,7 +429,7 @@ router.put('/user-profiles/:id', requireAuth, async (req, res) => {
         
         // Update timestamp
         profileData.updatedAt = new Date();
-        
+        profileData.profileUpdatedAt = new Date();
         // Check if profile exists first - try multiple query formats
         console.log('Searching for profile with ObjectId:', profileId.toString());
         let existingProfile = await UserProfiles.findOne({ _id: profileId });
@@ -602,6 +602,8 @@ router.delete('/user-profiles/:id', requireAuth, async (req, res) => {
     try {
         const db = mongoose.connection.db;
         const UserProfiles = db.collection('UserProfiles');
+        const UserChats = db.collection('UserChat');
+
         const { id } = req.params;
         
         // Convert string ID to ObjectId
@@ -614,6 +616,7 @@ router.delete('/user-profiles/:id', requireAuth, async (req, res) => {
         }
         
         const result = await UserProfiles.findOneAndDelete({ _id: profileId });
+        const chatResult = await UserChats.updateMany({ incomingPhone: result.incomingPhone }, { $set: { isDeleted: true } });
 
         if (!result) {
             return res.status(404).json({ error: 'User profile not found' });
