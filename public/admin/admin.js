@@ -870,7 +870,7 @@ function displayUserProfiles(userProfiles) {
     }
 
     // Store keys for form generation
-    const excludedKeys = ['_id', 'lastMessageAt', 'lastMessage', 'profileUpdatedAt'];
+    const excludedKeys = ['_id', 'lastMessage', 'updatedAt', 'profileUpdatedAt'];
     const allKeys = new Set();
     userProfiles.forEach(profile => {
         Object.keys(profile).forEach(key => {
@@ -884,6 +884,11 @@ function displayUserProfiles(userProfiles) {
     // Helper function to format values
     const formatValue = (value, key = '') => {
         if (value === null || value === undefined) return 'N/A';
+        
+        // Handle Date objects directly
+        if (value instanceof Date) {
+            return value.toLocaleString();
+        }
         
         // Handle MongoDB extended JSON format
         if (typeof value === 'object' && value !== null) {
@@ -926,7 +931,7 @@ function displayUserProfiles(userProfiles) {
     };
 
     // Convert to array and sort (put common fields first, then alphabetically)
-    const commonFields = ['name', 'incomingPhone', 'phone'];
+    const commonFields = ['name', 'incomingPhone', 'phone', 'lastMessageAt'];
     const sortedKeys = allUserProfileKeys.sort((a, b) => {
         const aIndex = commonFields.indexOf(a);
         const bIndex = commonFields.indexOf(b);
@@ -1162,7 +1167,7 @@ function generateUserProfileFormFields(profileData = {}) {
     const fieldsToShow = allUserProfileKeys.length > 0 ? allUserProfileKeys : commonFields;
     
     // Remove excluded keys
-    const excludedKeys = ['_id', 'lastMessageAt', 'lastMessage', 'createdAt', 'updatedAt', 'profileUpdatedAt'];
+    const excludedKeys = ['_id', 'lastMessage', 'createdAt', 'updatedAt', 'profileUpdatedAt'];
     const fields = fieldsToShow.filter(key => !excludedKeys.includes(key));
     
     formFields.innerHTML = fields.map(key => {
@@ -1195,7 +1200,8 @@ function generateUserProfileFormFields(profileData = {}) {
         }
         
         // Make incomingPhone read-only when editing (when profileData has incomingPhone value)
-        const isReadOnly = key === 'incomingPhone' && profileData.incomingPhone !== undefined && profileData.incomingPhone !== null && profileData.incomingPhone !== '';
+        // Make lastMessageAt always read-only as it's system-generated
+        const isReadOnly = (key === 'incomingPhone' && profileData.incomingPhone !== undefined && profileData.incomingPhone !== null && profileData.incomingPhone !== '') || key === 'lastMessageAt';
         
         return `
             <div class="form-group">
@@ -1382,7 +1388,8 @@ async function saveUserProfile() {
         const key = input.name || input.id.replace('userProfile_', '');
         
         // Skip incomingPhone when editing (it's read-only and shouldn't be changed)
-        if (profileId && key === 'incomingPhone') {
+        // Skip lastMessageAt as it's system-generated
+        if ((profileId && key === 'incomingPhone') || key === 'lastMessageAt') {
             return;
         }
         
