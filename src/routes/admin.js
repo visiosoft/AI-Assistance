@@ -371,6 +371,7 @@ router.post('/user-profiles', requireAuth, async (req, res) => {
         // Add timestamps
         profileData.createdAt = new Date();
         profileData.updatedAt = new Date();
+        profileData.profileUpdatedAt = new Date();
         
         const result = await UserProfiles.insertOne(profileData);
         const newProfile = await UserProfiles.findOne({ _id: result.insertedId });
